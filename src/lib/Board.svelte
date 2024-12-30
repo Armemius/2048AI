@@ -23,8 +23,28 @@
 
   let board: Array<Array<BoardCell>>;
   const BOARD_SIZE = 4;
+  const BEST_SCORE_ID = "best_score"
+
+  const encrypt = (value: number) => {
+    return btoa(String((value << 7) ^ 0xDEADBEEF));
+
+  }
+
+  const decrypt = (value: string) => {
+    return (Number(atob(value)) ^ 0xDEADBEEF) >> 7;
+  }
+
+  const saveBest = () => {
+    localStorage.setItem(BEST_SCORE_ID, encrypt(best))
+  }
+
+  const loadBest = () => {
+    let value = localStorage.getItem(BEST_SCORE_ID);
+    best = value ? decrypt(value) : 0;
+  }
 
   export const resetBoard = () => {
+    score = 0;
     board = new Array<Array<BoardCell>>();
     for (let it = 0; it < BOARD_SIZE; ++it) {
       board[it] = new Array<BoardCell>();
@@ -40,6 +60,7 @@
   };
 
   onMount(() => {
+    loadBest();
     resetBoard();
   });
 
@@ -124,6 +145,7 @@
       moveCellUp(board, it - 1, jt);
     } else if (board[it - 1][jt] === number) {
       board[it][jt] = null;
+      score += number * 2;
       board[it - 1][jt] = number * 2;
     }
   };
@@ -145,6 +167,7 @@
       moveCellDown(board, it + 1, jt);
     } else if (board[it + 1][jt] === number) {
       board[it][jt] = null;
+      score += number * 2;
       board[it + 1][jt] = number * 2;
     }
   };
@@ -166,6 +189,7 @@
       moveCellLeft(board, it, jt - 1);
     } else if (board[it][jt - 1] === number) {
       board[it][jt] = null;
+      score += number * 2;
       board[it][jt - 1] = number * 2;
     }
   };
@@ -187,6 +211,7 @@
       moveCellRight(board, it, jt + 1);
     } else if (board[it][jt + 1] === number) {
       board[it][jt] = null;
+      score += number * 2;
       board[it][jt + 1] = number * 2;
     }
   };
@@ -263,6 +288,11 @@
     }
 
     board = [...board];
+
+    if (score > best) {
+      best = score;
+      saveBest();
+    }
   };
 </script>
 
