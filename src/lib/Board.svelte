@@ -1,0 +1,339 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+
+  export let score = 0;
+  export let best = 0;
+
+  type BoardCell = null | number;
+
+  type CellState = {
+    x: number;
+    y: number;
+    value: number | null;
+  };
+
+  type ScheduledAnimation = {
+    type: "merge" | "move" | "upgrade";
+    from: CellState;
+    to: CellState;
+  };
+
+  let board: Array<Array<BoardCell>>;
+  const BOARD_SIZE = 4;
+
+  onMount(() => {
+    board = new Array<Array<BoardCell>>();
+    for (let it = 0; it < BOARD_SIZE; ++it) {
+      board[it] = new Array<BoardCell>();
+
+      for (let jt = 0; jt < BOARD_SIZE; ++jt) {
+        board[it][jt] = null;
+      }
+    }
+
+    genNewCell(board);
+    genNewCell(board);
+  });
+
+  const moveUp = (board: Array<Array<BoardCell>>) => {
+    for (let it = 0; it < BOARD_SIZE; ++it) {
+      for (let jt = 0; jt < BOARD_SIZE; ++jt) {
+        moveCellUp(board, it, jt);
+      }
+    }
+  };
+
+  const moveDown = (board: Array<Array<BoardCell>>) => {
+    for (let it = BOARD_SIZE - 1; it >= 0; --it) {
+      for (let jt = 0; jt < BOARD_SIZE; ++jt) {
+        moveCellDown(board, it, jt);
+      }
+    }
+  };
+
+  const moveLeft = (board: Array<Array<BoardCell>>) => {
+    for (let it = 0; it < BOARD_SIZE; ++it) {
+      for (let jt = 0; jt < BOARD_SIZE; ++jt) {
+        moveCellLeft(board, jt, it);
+      }
+    }
+  };
+
+  const moveRight = (board: Array<Array<BoardCell>>) => {
+    for (let it = BOARD_SIZE - 1; it >= 0; --it) {
+      for (let jt = 0; jt < BOARD_SIZE; ++jt) {
+        moveCellRight(board, jt, it);
+      }
+    }
+  };
+
+  const cloneBoard = (board: Array<Array<BoardCell>>) => {
+    const boardCopy: Array<Array<BoardCell>> = [];
+    for (let it = 0; it < BOARD_SIZE; ++it) {
+      boardCopy[it] = [...board[it]];
+    }
+    return boardCopy;
+  };
+
+  const genNewCell = (board: Array<Array<BoardCell>>) => {
+    const freeCells: Array<Array<number>> = [];
+
+    for (let it = 0; it < BOARD_SIZE; ++it) {
+      for (let jt = 0; jt < BOARD_SIZE; ++jt) {
+        if (!board[it][jt]) {
+          freeCells.push([it, jt]);
+        }
+      }
+    }
+
+    if (!freeCells.length) {
+      return false;
+    }
+
+    const index = (freeCells.length * Math.random()) | 0;
+    let number = Math.random() > 0.9 ? 4 : 2;
+
+    let x = freeCells[index][0];
+    let y = freeCells[index][1];
+    board[x][y] = number;
+    return true;
+  };
+
+  const moveCellUp = (
+    board: Array<Array<BoardCell>>,
+    it: number,
+    jt: number
+  ) => {
+    if (!board[it][jt] || it <= 0) {
+      return;
+    }
+
+    const number = board[it][jt];
+
+    if (board[it - 1][jt] === null) {
+      board[it][jt] = null;
+      board[it - 1][jt] = number;
+      moveCellUp(board, it - 1, jt);
+    } else if (board[it - 1][jt] === number) {
+      board[it][jt] = null;
+      board[it - 1][jt] = number * 2;
+    }
+  };
+
+  const moveCellDown = (
+    board: Array<Array<BoardCell>>,
+    it: number,
+    jt: number
+  ) => {
+    if (!board[it][jt] || it >= BOARD_SIZE - 1) {
+      return;
+    }
+
+    const number = board[it][jt];
+
+    if (board[it + 1][jt] === null) {
+      board[it][jt] = null;
+      board[it + 1][jt] = number;
+      moveCellDown(board, it + 1, jt);
+    } else if (board[it + 1][jt] === number) {
+      board[it][jt] = null;
+      board[it + 1][jt] = number * 2;
+    }
+  };
+
+  const moveCellLeft = (
+    board: Array<Array<BoardCell>>,
+    it: number,
+    jt: number
+  ) => {
+    if (!board[it][jt] || jt <= 0) {
+      return;
+    }
+
+    const number = board[it][jt];
+
+    if (board[it][jt - 1] === null) {
+      board[it][jt] = null;
+      board[it][jt - 1] = number;
+      moveCellLeft(board, it, jt - 1);
+    } else if (board[it][jt - 1] === number) {
+      board[it][jt] = null;
+      board[it][jt - 1] = number * 2;
+    }
+  };
+
+  const moveCellRight = (
+    board: Array<Array<BoardCell>>,
+    it: number,
+    jt: number
+  ) => {
+    if (!board[it][jt] || jt >= BOARD_SIZE - 1) {
+      return;
+    }
+
+    const number = board[it][jt];
+
+    if (board[it][jt + 1] === null) {
+      board[it][jt] = null;
+      board[it][jt + 1] = number;
+      moveCellRight(board, it, jt + 1);
+    } else if (board[it][jt + 1] === number) {
+      board[it][jt] = null;
+      board[it][jt + 1] = number * 2;
+    }
+  };
+
+  const applyMovement = (code: string, board: Array<Array<BoardCell>>) => {
+    if (code === "ArrowUp" || code === "KeyW") {
+      moveUp(board);
+    } else if (code === "ArrowDown" || code === "KeyS") {
+      moveDown(board);
+    } else if (code === "ArrowLeft" || code === "KeyA") {
+      moveLeft(board);
+    } else if (code === "ArrowRight" || code === "KeyD") {
+      moveRight(board);
+    } else {
+      return false;
+    }
+    return true;
+  };
+
+  const processKeyDown = (ev: KeyboardEvent) => {
+    if (applyMovement(ev.code, board)) {
+      genNewCell(board);
+    }
+
+    board = [...board];
+  };
+</script>
+
+<svelte:window on:keydown={processKeyDown} />
+<div class="board">
+  {#each board as rows}
+    {#each rows as cell}
+      <div class={`board-cell ${cell ? `cell-${cell}` : ``}`}>{cell ?? ""}</div>
+    {/each}
+  {/each}
+</div>
+
+<style lang="scss">
+  .board {
+    width: 500px;
+    height: 500px;
+    background: #bbada0;
+    border-radius: 6px;
+
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    padding: 7.5px;
+  }
+
+  .board-cell {
+    color: #776e65;
+    background: rgba(238, 228, 218, 0.35);
+    box-shadow:
+      0 0 30px 10px rgba(243, 215, 116, 0),
+      inset 0 0 0 1px rgba(255, 255, 255, 0);
+    margin: 7.5px;
+    border-radius: 3px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 50px;
+  }
+
+  .cell-2 {
+    color: #776e65;
+    background: #eee4da;
+  }
+
+  .cell-4 {
+    color: #776e65;
+    background: #ede0c8;
+  }
+
+  .cell-8 {
+    color: #f9f6f2;
+    background: #f2b179;
+  }
+
+  .cell-16 {
+    color: #f9f6f2;
+    background: #f59563;
+  }
+
+  .cell-32 {
+    color: #f9f6f2;
+    background: #f67c5f;
+  }
+
+  .cell-64 {
+    color: #f9f6f2;
+    background: #f65e3b;
+  }
+
+  .cell-128 {
+    color: #f9f6f2;
+    background: #edcf72;
+  }
+
+  .cell-256 {
+    color: #f9f6f2;
+    background: #edcc61;
+  }
+
+  .cell-512 {
+    color: #f9f6f2;
+    background: #edc850;
+  }
+
+  .cell-1024 {
+    color: #f9f6f2;
+    background: #edc53f;
+    font-size: 35px;
+  }
+
+  .cell-2048 {
+    color: #f9f6f2;
+    background: #edc22e;
+    font-size: 35px;
+  }
+
+  .cell-4096 {
+    color: #f9f6f2;
+    background: #ed676d;
+    font-size: 35px;
+  }
+
+  .cell-8192 {
+    color: #f9f6f2;
+    background: #ec4d59;
+    font-size: 35px;
+  }
+
+  .cell-16384 {
+    color: #f9f6f2;
+    background: #e14338;
+    font-size: 25px;
+  }
+
+  .cell-32768 {
+    color: #f9f6f2;
+    background: #71b4d6;
+    font-size: 25px;
+  }
+
+  .cell-65536 {
+    color: #f9f6f2;
+    background: #5ca0df;
+    font-size: 25px;
+  }
+
+  .cell-131072 {
+    color: #f9f6f2;
+    background: #027abf;
+    font-size: 15px;
+  }
+</style>
