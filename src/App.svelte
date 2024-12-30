@@ -1,14 +1,31 @@
 <script lang="ts">
   import Board from "./lib/Board.svelte";
+  import Brain from "./lib/icons/Brain.svelte";
+  import Restart from "./lib/icons/Restart.svelte";
 
   let score = 0;
   let best = 0;
+  let ai = false;
+
+  let resetBoard: any;
+
+  const switchAiMode = () => {
+    ai = !ai;
+  };
 </script>
 
 <main>
   <div class="title">
     <div class="header">
       <h1>2048</h1>
+    </div>
+    <div class="icon-container">
+      <button class="icon" on:click={resetBoard}>
+        <Restart />
+      </button>
+      <button class={`icon ${ai ? "active" : ""}`} on:click={switchAiMode}>
+        <Brain />
+      </button>
     </div>
     <div class="score-container">
       <section class="score">
@@ -21,7 +38,7 @@
       </section>
     </div>
   </div>
-  <Board bind:score bind:best />
+  <Board bind:score bind:best bind:resetBoard bind:ai />
 </main>
 
 <style lang="scss">
@@ -48,6 +65,31 @@
   .header {
     font-size: 30px;
     line-height: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .icon-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 7px;
+
+    .icon {
+      overflow: hidden;
+      margin-top: 10px;
+      opacity: 0.5;
+      cursor: pointer;
+    }
+
+    .icon.active {
+      opacity: 0.9;
+    }
+
+    .icon:hover {
+      opacity: 1;
+    }
   }
 
   .score-container {
@@ -78,5 +120,4 @@
       font-size: 25px;
     }
   }
-
 </style>

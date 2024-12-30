@@ -4,6 +4,13 @@
   user-select: none;
 }
 
+button {
+  border: none;
+  background: none;
+  outline:none;
+  
+}
+
 html,
 body {
   background: #faf8ef;

@@ -3,6 +3,7 @@
 
   export let score = 0;
   export let best = 0;
+  export let ai = false;
 
   type BoardCell = null | number;
 
@@ -23,7 +24,7 @@
   let board: Array<Array<BoardCell>>;
   const BOARD_SIZE = 4;
 
-  onMount(() => {
+  export const resetBoard = () => {
     board = new Array<Array<BoardCell>>();
     for (let it = 0; it < BOARD_SIZE; ++it) {
       board[it] = new Array<BoardCell>();
@@ -35,6 +36,11 @@
 
     genNewCell(board);
     genNewCell(board);
+    gameOver = false;
+  };
+
+  onMount(() => {
+    resetBoard();
   });
 
   const moveUp = (board: Array<Array<BoardCell>>) => {
@@ -185,6 +191,14 @@
     }
   };
 
+  const applyReset = (code: string) => {
+    if (code === "Enter" && gameOver) {
+      resetBoard();
+      return true;
+    }
+    return false;
+  };
+
   const applyMovement = (code: string, board: Array<Array<BoardCell>>) => {
     if (code === "ArrowUp" || code === "KeyW") {
       moveUp(board);
@@ -232,13 +246,17 @@
     for (let it = 0; it < BOARD_SIZE; ++it) {
       for (let jt = 0; jt < BOARD_SIZE; ++jt) {
         movable ||= checkCellMoving(board, it, jt);
-        console.log(it, jt, checkCellMoving(board, it, jt))
+        console.log(it, jt, checkCellMoving(board, it, jt));
       }
     }
     return movable;
   };
 
   const processKeyDown = (ev: KeyboardEvent) => {
+    if (applyReset(ev.code)) {
+      return;
+    }
+
     if (applyMovement(ev.code, board)) {
       genNewCell(board);
       gameOver = !canContinue(board);
