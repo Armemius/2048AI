@@ -3,23 +3,27 @@
 
   export let score = 0;
   export let best = 0;
-  export let ai = false;
+
+  
+  // svelte-ignore export_let_unused
+    export let ai = false;
 
   type BoardCell = null | number;
 
   let gameOver = false;
 
-  type CellState = {
-    x: number;
-    y: number;
-    value: number | null;
-  };
+  // type CellState = {
+  //   x: number;
+  //   y: number;
+  //   value: number | null;
+  //   birth: number;
+  // };
 
-  type ScheduledAnimation = {
-    type: "merge" | "move" | "upgrade";
-    from: CellState;
-    to: CellState;
-  };
+  // type ScheduledAnimation = {
+  //   type: "merge" | "move" | "upgrade";
+  //   from: CellState;
+  //   to: CellState;
+  // };
 
   let board: Array<Array<BoardCell>>;
   const BOARD_SIZE = 4;
@@ -96,13 +100,13 @@
     }
   };
 
-  const cloneBoard = (board: Array<Array<BoardCell>>) => {
-    const boardCopy: Array<Array<BoardCell>> = [];
-    for (let it = 0; it < BOARD_SIZE; ++it) {
-      boardCopy[it] = [...board[it]];
-    }
-    return boardCopy;
-  };
+  // const cloneBoard = (board: Array<Array<BoardCell>>) => {
+  //   const boardCopy: Array<Array<BoardCell>> = [];
+  //   for (let it = 0; it < BOARD_SIZE; ++it) {
+  //     boardCopy[it] = [...board[it]];
+  //   }
+  //   return boardCopy;
+  // };
 
   const genNewCell = (board: Array<Array<BoardCell>>) => {
     const freeCells: Array<Array<number>> = [];

@@ -7,10 +7,12 @@
   let best = 0;
   let ai = false;
 
-  let resetBoard: any;
+  let resetBoard: () => void;
 
   const switchAiMode = () => {
     ai = !ai;
+    alert('AI in NIY!')
+    ai = false;
   };
 </script>
 
