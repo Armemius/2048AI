@@ -6,6 +6,8 @@
 
   type BoardCell = null | number;
 
+  let gameOver = false;
+
   type CellState = {
     x: number;
     y: number;
@@ -198,9 +200,48 @@
     return true;
   };
 
+  const checkCellMoving = (
+    board: Array<Array<BoardCell>>,
+    it: number,
+    jt: number
+  ) => {
+    if (board[it][jt] === undefined) {
+      return false;
+    }
+    if (board[it][jt] === null) {
+      return true;
+    }
+    if (it > 0 && board[it - 1][jt] === board[it][jt]) {
+      return true;
+    }
+    if (it < BOARD_SIZE - 1 && board[it + 1][jt] === board[it][jt]) {
+      return true;
+    }
+    if (jt > 0 && board[it][jt - 1] === board[it][jt]) {
+      return true;
+    }
+    if (jt < BOARD_SIZE - 1 && board[it][jt + 1] === board[it][jt]) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const canContinue = (board: Array<Array<BoardCell>>) => {
+    let movable = false;
+    for (let it = 0; it < BOARD_SIZE; ++it) {
+      for (let jt = 0; jt < BOARD_SIZE; ++jt) {
+        movable ||= checkCellMoving(board, it, jt);
+        console.log(it, jt, checkCellMoving(board, it, jt))
+      }
+    }
+    return movable;
+  };
+
   const processKeyDown = (ev: KeyboardEvent) => {
     if (applyMovement(ev.code, board)) {
       genNewCell(board);
+      gameOver = !canContinue(board);
     }
 
     board = [...board];
@@ -214,10 +255,14 @@
       <div class={`board-cell ${cell ? `cell-${cell}` : ``}`}>{cell ?? ""}</div>
     {/each}
   {/each}
+  <div class={`msg-container ${gameOver ? "active" : "hidden"}`}>
+    Игра окончена!
+  </div>
 </div>
 
 <style lang="scss">
   .board {
+    position: relative;
     width: 500px;
     height: 500px;
     background: #bbada0;
@@ -227,6 +272,29 @@
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(4, 1fr);
     padding: 7.5px;
+  }
+
+  .msg-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: inherit;
+    background: #eee4da80;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 50px;
+
+    transition: 0.4s;
+    opacity: 0;
+
+    &.active {
+      opacity: 100%;
+    }
   }
 
   .board-cell {
