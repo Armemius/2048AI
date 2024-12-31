@@ -1,8 +1,8 @@
 name: 2048 AI Game Tasks
 
 on:
-  push: { branches: [main] }
-  pull_request: { branches: [main] }
+  push: { branches: [main, ai] }
+  pull_request: { branches: [main, ai] }
 
 jobs:
   lint-markdown:
