@@ -9,6 +9,7 @@
   type BoardCell = null | number;
 
   let gameOver = false;
+  let step = 0;
 
   type CellState = {
     x: number;
@@ -79,7 +80,22 @@
     genNewCell(board);
     genNewCell(board);
     gameOver = false;
+    step = 0;
     animationQueue = [];
+  };
+
+  const compareBoards = (
+    a: Array<Array<BoardCell>>,
+    b: Array<Array<BoardCell>>
+  ) => {
+    for (let it = 0; it < BOARD_SIZE; ++it) {
+      for (let jt = 0; jt < BOARD_SIZE; ++jt) {
+        if (a[it][jt] !== b[it][jt]) {
+          return false;
+        }
+      }
+    }
+    return true;
   };
 
   onMount(() => {
@@ -90,21 +106,26 @@
         return;
       }
 
+      const newBoard = cloneBoard(board);
       let factor = Math.random();
       if (factor > 0.75) {
-        moveUp(board);
+        moveUp(newBoard);
       } else if (factor > 0.5) {
-        moveDown(board);
+        moveDown(newBoard);
       } else if (factor > 0.25) {
-        moveLeft(board);
+        moveLeft(newBoard);
       } else {
-        moveRight(board);
+        moveRight(newBoard);
       }
-      genNewCell(board);
-      gameOver = !canContinue(board);
+      if (compareBoards(board, newBoard)) {
+        return;
+      }
+
+      genNewCell(newBoard);
+      gameOver = !canContinue(newBoard);
 
       animationQueue = [];
-      board = [...board];
+      board = [...newBoard];
     }, 50);
   });
 
@@ -429,10 +450,15 @@
     const newBoard = cloneBoard(board);
 
     if (applyMovement(ev.code, newBoard)) {
+      if (compareBoards(board, newBoard)) {
+        return;
+      }
       genNewCell(newBoard);
       gameOver = !canContinue(newBoard);
     }
 
+    step += 1;
+    console.log("Step:", step);
     console.log([...animationQueue]);
     processAnimations();
     updateBoard(newBoard);
