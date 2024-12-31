@@ -4,47 +4,66 @@
   export let score = 0;
   export let best = 0;
 
-  
   export let ai = false;
 
   type BoardCell = null | number;
 
   let gameOver = false;
 
-  // type CellState = {
-  //   x: number;
-  //   y: number;
-  //   value: number | null;
-  //   birth: number;
-  // };
+  type CellState = {
+    x: number;
+    y: number;
+    value: number | null;
+  };
 
-  // type ScheduledAnimation = {
-  //   type: "merge" | "move" | "upgrade";
-  //   from: CellState;
-  //   to: CellState;
-  // };
+  type ScheduledAnimation = {
+    type: "move" | "upgrade" | "create";
+    from: CellState;
+    to: CellState;
+  };
+
+  let animationQueue: Array<ScheduledAnimation> = [];
 
   let board: Array<Array<BoardCell>>;
   const BOARD_SIZE = 4;
-  const BEST_SCORE_ID = "best_score"
+  const BEST_SCORE_ID = "best_score";
+
+  const processAnimations = () => {
+    if (!animationQueue.length) {
+      return;
+    }
+
+    while (true) {
+      const animation = animationQueue.shift();
+      if (!animation) {
+        break;
+      }
+
+      // TODO
+    }
+  };
+
+  const updateBoard = (newBoard: Array<Array<BoardCell>>) => {
+    animationQueue = [];
+    board = newBoard;
+  };
 
   const encrypt = (value: number) => {
-    return btoa(String((value << 7) ^ 0xDEADBEEF));
-
-  }
+    return btoa(String((value << 7) ^ 0xdeadbeef));
+  };
 
   const decrypt = (value: string) => {
-    return (Number(atob(value)) ^ 0xDEADBEEF) >> 7;
-  }
+    return (Number(atob(value)) ^ 0xdeadbeef) >> 7;
+  };
 
   const saveBest = () => {
-    localStorage.setItem(BEST_SCORE_ID, encrypt(best))
-  }
+    localStorage.setItem(BEST_SCORE_ID, encrypt(best));
+  };
 
   const loadBest = () => {
     let value = localStorage.getItem(BEST_SCORE_ID);
     best = value ? decrypt(value) : 0;
-  }
+  };
 
   export const resetBoard = () => {
     score = 0;
@@ -60,6 +79,7 @@
     genNewCell(board);
     genNewCell(board);
     gameOver = false;
+    animationQueue = [];
   };
 
   onMount(() => {
@@ -83,7 +103,7 @@
       genNewCell(board);
       gameOver = !canContinue(board);
 
-      board = [...board];
+      animationQueue = [];
       board = [...board];
     }, 50);
   });
@@ -91,7 +111,7 @@
   const moveUp = (board: Array<Array<BoardCell>>) => {
     for (let it = 0; it < BOARD_SIZE; ++it) {
       for (let jt = 0; jt < BOARD_SIZE; ++jt) {
-        moveCellUp(board, it, jt);
+        animationQueue.push(...moveCellUp(board, it, jt));
       }
     }
   };
@@ -99,7 +119,7 @@
   const moveDown = (board: Array<Array<BoardCell>>) => {
     for (let it = BOARD_SIZE - 1; it >= 0; --it) {
       for (let jt = 0; jt < BOARD_SIZE; ++jt) {
-        moveCellDown(board, it, jt);
+        animationQueue.push(...moveCellDown(board, it, jt));
       }
     }
   };
@@ -107,7 +127,7 @@
   const moveLeft = (board: Array<Array<BoardCell>>) => {
     for (let it = 0; it < BOARD_SIZE; ++it) {
       for (let jt = 0; jt < BOARD_SIZE; ++jt) {
-        moveCellLeft(board, jt, it);
+        animationQueue.push(...moveCellLeft(board, jt, it));
       }
     }
   };
@@ -115,18 +135,18 @@
   const moveRight = (board: Array<Array<BoardCell>>) => {
     for (let it = BOARD_SIZE - 1; it >= 0; --it) {
       for (let jt = 0; jt < BOARD_SIZE; ++jt) {
-        moveCellRight(board, jt, it);
+        animationQueue.push(...moveCellRight(board, jt, it));
       }
     }
   };
 
-  // const cloneBoard = (board: Array<Array<BoardCell>>) => {
-  //   const boardCopy: Array<Array<BoardCell>> = [];
-  //   for (let it = 0; it < BOARD_SIZE; ++it) {
-  //     boardCopy[it] = [...board[it]];
-  //   }
-  //   return boardCopy;
-  // };
+  const cloneBoard = (board: Array<Array<BoardCell>>) => {
+    const boardCopy: Array<Array<BoardCell>> = [];
+    for (let it = 0; it < BOARD_SIZE; ++it) {
+      boardCopy[it] = [...board[it]];
+    }
+    return boardCopy;
+  };
 
   const genNewCell = (board: Array<Array<BoardCell>>) => {
     const freeCells: Array<Array<number>> = [];
@@ -149,16 +169,32 @@
     let x = freeCells[index][0];
     let y = freeCells[index][1];
     board[x][y] = number;
+
+    animationQueue.push({
+      type: "create",
+      from: { x, y, value: null },
+      to: { x, y, value: number },
+    });
+
     return true;
   };
 
   const moveCellUp = (
     board: Array<Array<BoardCell>>,
     it: number,
-    jt: number
-  ) => {
+    jt: number,
+    animation?: ScheduledAnimation
+  ): Array<ScheduledAnimation> => {
     if (!board[it][jt] || it <= 0) {
-      return;
+      return [];
+    }
+
+    if (!animation) {
+      animation = {
+        type: "move",
+        from: { x: it, y: jt, value: board[it][jt] },
+        to: { x: it, y: jt, value: board[it][jt] },
+      };
     }
 
     const number = board[it][jt];
@@ -166,43 +202,84 @@
     if (board[it - 1][jt] === null) {
       board[it][jt] = null;
       board[it - 1][jt] = number;
-      moveCellUp(board, it - 1, jt);
+      animation.to = { x: it - 1, y: jt, value: number };
+      return moveCellUp(board, it - 1, jt, animation);
     } else if (board[it - 1][jt] === number) {
       board[it][jt] = null;
       score += number * 2;
       board[it - 1][jt] = number * 2;
+      animation.to = { x: it - 1, y: jt, value: number };
+      return [
+        animation,
+        {
+          type: "upgrade",
+          from: { x: it - 1, y: jt, value: number },
+          to: { x: it - 1, y: jt, value: number * 2 },
+        },
+      ];
+    } else {
+      return [animation];
     }
   };
 
   const moveCellDown = (
     board: Array<Array<BoardCell>>,
     it: number,
-    jt: number
-  ) => {
+    jt: number,
+    animation?: ScheduledAnimation
+  ): Array<ScheduledAnimation> => {
     if (!board[it][jt] || it >= BOARD_SIZE - 1) {
-      return;
+      return [];
+    }
+
+    if (!animation) {
+      animation = {
+        type: "move",
+        from: { x: it, y: jt, value: board[it][jt] },
+        to: { x: it, y: jt, value: board[it][jt] },
+      };
     }
 
     const number = board[it][jt];
-
     if (board[it + 1][jt] === null) {
       board[it][jt] = null;
       board[it + 1][jt] = number;
-      moveCellDown(board, it + 1, jt);
+      animation.to = { x: it + 1, y: jt, value: number };
+      return moveCellDown(board, it + 1, jt, animation);
     } else if (board[it + 1][jt] === number) {
       board[it][jt] = null;
       score += number * 2;
       board[it + 1][jt] = number * 2;
+      animation.to = { x: it + 1, y: jt, value: number };
+      return [
+        animation,
+        {
+          type: "upgrade",
+          from: { x: it + 1, y: jt, value: number },
+          to: { x: it + 1, y: jt, value: number * 2 },
+        },
+      ];
+    } else {
+      return [animation];
     }
   };
 
   const moveCellLeft = (
     board: Array<Array<BoardCell>>,
     it: number,
-    jt: number
-  ) => {
+    jt: number,
+    animation?: ScheduledAnimation
+  ): Array<ScheduledAnimation> => {
     if (!board[it][jt] || jt <= 0) {
-      return;
+      return [];
+    }
+
+    if (!animation) {
+      animation = {
+        type: "move",
+        from: { x: it, y: jt, value: board[it][jt] },
+        to: { x: it, y: jt, value: board[it][jt] },
+      };
     }
 
     const number = board[it][jt];
@@ -210,21 +287,42 @@
     if (board[it][jt - 1] === null) {
       board[it][jt] = null;
       board[it][jt - 1] = number;
-      moveCellLeft(board, it, jt - 1);
+      animation.to = { x: it, y: jt - 1, value: number };
+      return moveCellLeft(board, it, jt - 1, animation);
     } else if (board[it][jt - 1] === number) {
       board[it][jt] = null;
       score += number * 2;
       board[it][jt - 1] = number * 2;
+      animation.to = { x: it, y: jt - 1, value: number };
+      return [
+        animation,
+        {
+          type: "upgrade",
+          from: { x: it, y: jt - 1, value: number },
+          to: { x: it, y: jt - 1, value: number * 2 },
+        },
+      ];
+    } else {
+      return [animation];
     }
   };
 
   const moveCellRight = (
     board: Array<Array<BoardCell>>,
     it: number,
-    jt: number
-  ) => {
+    jt: number,
+    animation?: ScheduledAnimation
+  ): Array<ScheduledAnimation> => {
     if (!board[it][jt] || jt >= BOARD_SIZE - 1) {
-      return;
+      return [];
+    }
+
+    if (!animation) {
+      animation = {
+        type: "move",
+        from: { x: it, y: jt, value: board[it][jt] },
+        to: { x: it, y: jt, value: board[it][jt] },
+      };
     }
 
     const number = board[it][jt];
@@ -232,11 +330,23 @@
     if (board[it][jt + 1] === null) {
       board[it][jt] = null;
       board[it][jt + 1] = number;
-      moveCellRight(board, it, jt + 1);
+      animation.to = { x: it, y: jt + 1, value: number };
+      return moveCellRight(board, it, jt + 1, animation);
     } else if (board[it][jt + 1] === number) {
       board[it][jt] = null;
       score += number * 2;
       board[it][jt + 1] = number * 2;
+      animation.to = { x: it, y: jt + 1, value: number };
+      return [
+        animation,
+        {
+          type: "upgrade",
+          from: { x: it, y: jt + 1, value: number },
+          to: { x: it, y: jt + 1, value: number * 2 },
+        },
+      ];
+    } else {
+      return [animation];
     }
   };
 
@@ -260,6 +370,13 @@
     } else {
       return false;
     }
+    animationQueue = animationQueue.filter(
+      (animation) =>
+        animation.type !== "move" ||
+        (animation.type === "move" &&
+          (animation.from.x !== animation.to.x ||
+            animation.from.y !== animation.to.y))
+    );
     return true;
   };
 
@@ -295,7 +412,6 @@
     for (let it = 0; it < BOARD_SIZE; ++it) {
       for (let jt = 0; jt < BOARD_SIZE; ++jt) {
         movable ||= checkCellMoving(board, it, jt);
-        console.log(it, jt, checkCellMoving(board, it, jt));
       }
     }
     return movable;
@@ -310,12 +426,16 @@
       return;
     }
 
-    if (applyMovement(ev.code, board)) {
-      genNewCell(board);
-      gameOver = !canContinue(board);
+    const newBoard = cloneBoard(board);
+
+    if (applyMovement(ev.code, newBoard)) {
+      genNewCell(newBoard);
+      gameOver = !canContinue(newBoard);
     }
 
-    board = [...board];
+    console.log([...animationQueue]);
+    processAnimations();
+    updateBoard(newBoard);
 
     if (score > best) {
       best = score;
