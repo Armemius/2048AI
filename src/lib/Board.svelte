@@ -5,6 +5,7 @@
   export let best = 0;
 
   export let ai = false;
+  let isInteractive = true;
 
   type BoardCell = null | number;
 
@@ -29,7 +30,16 @@
   const BOARD_SIZE = 4;
   const BEST_SCORE_ID = "best_score";
 
-  const processAnimations = () => {
+  let boardDivContainer: HTMLDivElement | null = null;
+
+  const getCell = (x: number, y: number) => {
+    return boardDivContainer?.children[x * BOARD_SIZE + y] as HTMLDivElement;
+  };
+
+  const delay = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  const processAnimations = async () => {
     if (!animationQueue.length) {
       return;
     }
@@ -40,13 +50,49 @@
         break;
       }
 
-      // TODO
+      if (animation.type == "create") {
+        const cell = getCell(animation.to.x, animation.to.y);
+        // alert(cell.innerText);
+        cell.classList.add("cell-created");
+        setTimeout(() => {
+          cell.classList.remove("cell-created");
+        }, 210);
+      }
+
+      if (animation.type == "move") {
+        console.log("Animation", animation);
+        const cell = getCell(animation.from.x, animation.from.y);
+        const getDirection = (from: CellState, to: CellState) => {
+          if (from.x === to.x) {
+            return from.y > to.y ? "left" : "right";
+          } else {
+            return from.x > to.x ? "up" : "down";
+          }
+        };
+        const getDistance = (from: CellState, to: CellState) => {
+          return Math.abs(from.x - to.x) + Math.abs(from.y - to.y);
+        };
+        const className = `cell-move-${getDirection(
+          animation.from,
+          animation.to
+        )}-${getDistance(animation.from, animation.to)}`;
+        cell.classList.add(className);
+        setTimeout(() => {
+          cell.classList.remove(className);
+        }, 210);
+      }
+      if (animation.type == "upgrade") {
+        const cell = getCell(animation.to.x, animation.to.y);
+        cell.classList.add("cell-upgraded");
+        setTimeout(() => {
+          cell.classList.remove("cell-upgraded");
+        }, 210);
+      }
     }
   };
 
   const updateBoard = (newBoard: Array<Array<BoardCell>>) => {
-    animationQueue = [];
-    board = newBoard;
+    board = [...newBoard];
   };
 
   const encrypt = (value: number) => {
@@ -133,6 +179,7 @@
     for (let it = 0; it < BOARD_SIZE; ++it) {
       for (let jt = 0; jt < BOARD_SIZE; ++jt) {
         animationQueue.push(...moveCellUp(board, it, jt));
+        board = [...board];
       }
     }
   };
@@ -141,6 +188,7 @@
     for (let it = BOARD_SIZE - 1; it >= 0; --it) {
       for (let jt = 0; jt < BOARD_SIZE; ++jt) {
         animationQueue.push(...moveCellDown(board, it, jt));
+        board = [...board];
       }
     }
   };
@@ -149,6 +197,7 @@
     for (let it = 0; it < BOARD_SIZE; ++it) {
       for (let jt = 0; jt < BOARD_SIZE; ++jt) {
         animationQueue.push(...moveCellLeft(board, jt, it));
+        board = [...board];
       }
     }
   };
@@ -157,6 +206,7 @@
     for (let it = BOARD_SIZE - 1; it >= 0; --it) {
       for (let jt = 0; jt < BOARD_SIZE; ++jt) {
         animationQueue.push(...moveCellRight(board, jt, it));
+        board = [...board];
       }
     }
   };
@@ -207,6 +257,9 @@
     animation?: ScheduledAnimation
   ): Array<ScheduledAnimation> => {
     if (!board[it][jt] || it <= 0) {
+      if (animation) {
+        return [animation];
+      }
       return [];
     }
 
@@ -250,6 +303,9 @@
     animation?: ScheduledAnimation
   ): Array<ScheduledAnimation> => {
     if (!board[it][jt] || it >= BOARD_SIZE - 1) {
+      if (animation) {
+        return [animation];
+      }
       return [];
     }
 
@@ -292,6 +348,9 @@
     animation?: ScheduledAnimation
   ): Array<ScheduledAnimation> => {
     if (!board[it][jt] || jt <= 0) {
+      if (animation) {
+        return [animation];
+      }
       return [];
     }
 
@@ -335,6 +394,9 @@
     animation?: ScheduledAnimation
   ): Array<ScheduledAnimation> => {
     if (!board[it][jt] || jt >= BOARD_SIZE - 1) {
+      if (animation) {
+        return [animation];
+      }
       return [];
     }
 
@@ -438,7 +500,11 @@
     return movable;
   };
 
-  const processKeyDown = (ev: KeyboardEvent) => {
+  const processKeyDown = async (ev: KeyboardEvent) => {
+    if (!isInteractive) {
+      return;
+    }
+
     if (applyReset(ev.code)) {
       return;
     }
@@ -447,31 +513,46 @@
       return;
     }
 
+    isInteractive = false;
     const newBoard = cloneBoard(board);
 
     if (applyMovement(ev.code, newBoard)) {
       if (compareBoards(board, newBoard)) {
+        isInteractive = true
         return;
       }
-      genNewCell(newBoard);
-      gameOver = !canContinue(newBoard);
-    }
 
-    step += 1;
-    console.log("Step:", step);
-    console.log([...animationQueue]);
-    processAnimations();
-    updateBoard(newBoard);
+      step += 1;
+      console.log("Step:", step);
+      console.log([...animationQueue]);
+
+      await processAnimations();
+      await delay(200);
+      updateBoard(newBoard);
+
+      const movedBoard = cloneBoard(newBoard);
+      genNewCell(movedBoard);
+
+      updateBoard(movedBoard);
+      setTimeout(async () => {
+        await processAnimations();
+      });
+      await delay(100);
+
+      gameOver = !canContinue(movedBoard);
+    }
 
     if (score > best) {
       best = score;
       saveBest();
     }
+
+    isInteractive = true;
   };
 </script>
 
 <svelte:window on:keydown={processKeyDown} />
-<div class="board">
+<div class="board" bind:this={boardDivContainer}>
   {#each board as rows}
     {#each rows as cell}
       <div class={`board-cell ${cell ? `cell-${cell}` : ``}`}>{cell ?? ""}</div>
@@ -482,10 +563,10 @@
   </div>
   <div class="board-layout">
     {#each board as rows}
-    {#each rows as _}
-      <div></div>
+      {#each rows as cell}
+        <div class={`cell-${cell}`}></div>
+      {/each}
     {/each}
-  {/each}
   </div>
 </div>
 
@@ -519,7 +600,7 @@
 
     div {
       z-index: -80;
-      background: rgba(238, 228, 218, 0.35);;
+      background: rgba(238, 228, 218, 0.35);
       border-radius: 3px;
       margin: 7.5px;
     }
@@ -654,5 +735,200 @@
     color: #f9f6f2;
     background: #027abf;
     font-size: 15px;
+  }
+
+  .cell-created {
+    opacity: 0;
+    animation: cell-created 0.2s forwards;
+  }
+
+  .cell-upgraded {
+    animation: cell-upgraded 0.2s forwards;
+    z-index: 2000;
+  }
+
+  .cell-move-up-1 {
+    animation: move-1-up 0.2s forwards;
+  }
+  .cell-move-up-2 {
+    animation: move-2-up 0.2s forwards;
+  }
+  .cell-move-up-3 {
+    animation: move-3-up 0.2s forwards;
+  }
+
+  .cell-move-down-1 {
+    animation: move-1-down 0.2s forwards;
+  }
+  .cell-move-down-2 {
+    animation: move-2-down 0.2s forwards;
+  }
+  .cell-move-down-3 {
+    animation: move-3-down 0.2s forwards;
+  }
+
+  .cell-move-left-1 {
+    animation: move-1-left 0.2s forwards;
+  }
+  .cell-move-left-2 {
+    animation: move-2-left 0.2s forwards;
+  }
+  .cell-move-left-3 {
+    animation: move-3-left 0.2s forwards;
+  }
+
+  .cell-move-right-1 {
+    animation: move-1-right 0.2s forwards;
+  }
+  .cell-move-right-2 {
+    animation: move-2-right 0.2s forwards;
+  }
+  .cell-move-right-3 {
+    animation: move-3-right 0.2s forwards;
+  }
+
+  @keyframes cell-created {
+    0% {
+      transform: scale(0.2);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes cell-upgraded {
+    0% {
+      transform: scale(1);
+    }
+
+    50% {
+      transform: scale(1.2);
+    }
+
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes move-1-up {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(-125px);
+    }
+  }
+
+  @keyframes move-2-up {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(-250px);
+    }
+  }
+
+  @keyframes move-3-up {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(-375px);
+    }
+  }
+
+  @keyframes move-1-down {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(125px);
+    }
+  }
+
+  @keyframes move-2-down {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(250px);
+    }
+  }
+
+  @keyframes move-3-down {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(375px);
+    }
+  }
+
+  @keyframes move-1-left {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(-125px);
+    }
+  }
+
+  @keyframes move-2-left {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(-250px);
+    }
+  }
+
+  @keyframes move-3-left {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(-375px);
+    }
+  }
+
+  @keyframes move-1-right {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(125px);
+    }
+  }
+
+  @keyframes move-2-right {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(250px);
+    }
+  }
+
+  @keyframes move-3-right {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(375px);
+    }
   }
 </style>
