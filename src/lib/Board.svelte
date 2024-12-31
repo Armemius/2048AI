@@ -480,6 +480,13 @@
   <div class={`msg-container ${gameOver ? "active" : "hidden"}`}>
     Игра окончена!
   </div>
+  <div class="board-layout">
+    {#each board as rows}
+    {#each rows as _}
+      <div></div>
+    {/each}
+  {/each}
+  </div>
 </div>
 
 <style lang="scss">
@@ -487,6 +494,20 @@
     position: relative;
     width: 500px;
     height: 500px;
+    border-radius: 6px;
+
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    padding: 7.5px;
+  }
+
+  .board-layout {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
     background: #bbada0;
     border-radius: 6px;
 
@@ -494,6 +515,14 @@
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(4, 1fr);
     padding: 7.5px;
+    z-index: -100;
+
+    div {
+      z-index: -80;
+      background: rgba(238, 228, 218, 0.35);;
+      border-radius: 3px;
+      margin: 7.5px;
+    }
   }
 
   .msg-container {
@@ -504,6 +533,7 @@
     bottom: 0;
     border-radius: inherit;
     background: #eee4da80;
+    z-index: 9000;
 
     display: flex;
     justify-content: center;
@@ -521,7 +551,6 @@
 
   .board-cell {
     color: #776e65;
-    background: rgba(238, 228, 218, 0.35);
     box-shadow:
       0 0 30px 10px rgba(243, 215, 116, 0),
       inset 0 0 0 1px rgba(255, 255, 255, 0);
