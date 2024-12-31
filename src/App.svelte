@@ -11,8 +11,6 @@
 
   const switchAiMode = () => {
     ai = !ai;
-    alert('AI in NIY!')
-    ai = false;
   };
 </script>
 

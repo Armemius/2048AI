@@ -5,8 +5,7 @@
   export let best = 0;
 
   
-  // svelte-ignore export_let_unused
-    export let ai = false;
+  export let ai = false;
 
   type BoardCell = null | number;
 
@@ -66,6 +65,27 @@
   onMount(() => {
     loadBest();
     resetBoard();
+    setInterval(() => {
+      if (!ai || gameOver) {
+        return;
+      }
+
+      let factor = Math.random();
+      if (factor > 0.75) {
+        moveUp(board);
+      } else if (factor > 0.5) {
+        moveDown(board);
+      } else if (factor > 0.25) {
+        moveLeft(board);
+      } else {
+        moveRight(board);
+      }
+      genNewCell(board);
+      gameOver = !canContinue(board);
+
+      board = [...board];
+      board = [...board];
+    }, 50);
   });
 
   const moveUp = (board: Array<Array<BoardCell>>) => {
@@ -283,6 +303,10 @@
 
   const processKeyDown = (ev: KeyboardEvent) => {
     if (applyReset(ev.code)) {
+      return;
+    }
+
+    if (ai) {
       return;
     }
 
