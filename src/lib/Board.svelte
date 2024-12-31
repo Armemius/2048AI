@@ -25,6 +25,7 @@
   };
 
   let animationQueue: Array<ScheduledAnimation> = [];
+  let currentMerged: Set<number> = new Set();
 
   let board: Array<Array<BoardCell>>;
   const BOARD_SIZE = 4;
@@ -127,6 +128,7 @@
     genNewCell(board);
     gameOver = false;
     step = 0;
+    currentMerged.clear();
     animationQueue = [];
   };
 
@@ -166,6 +168,7 @@
       if (compareBoards(board, newBoard)) {
         return;
       }
+      currentMerged.clear();
 
       genNewCell(newBoard);
       gameOver = !canContinue(newBoard);
@@ -278,7 +281,8 @@
       board[it - 1][jt] = number;
       animation.to = { x: it - 1, y: jt, value: number };
       return moveCellUp(board, it - 1, jt, animation);
-    } else if (board[it - 1][jt] === number) {
+    } else if (board[it - 1][jt] === number && !currentMerged.has((it - 1) * BOARD_SIZE + jt)) {
+      currentMerged.add((it - 1) * BOARD_SIZE + jt);
       board[it][jt] = null;
       score += number * 2;
       board[it - 1][jt] = number * 2;
@@ -323,7 +327,8 @@
       board[it + 1][jt] = number;
       animation.to = { x: it + 1, y: jt, value: number };
       return moveCellDown(board, it + 1, jt, animation);
-    } else if (board[it + 1][jt] === number) {
+    } else if (board[it + 1][jt] === number && !currentMerged.has((it + 1) * BOARD_SIZE + jt)) {
+      currentMerged.add((it + 1) * BOARD_SIZE + jt);
       board[it][jt] = null;
       score += number * 2;
       board[it + 1][jt] = number * 2;
@@ -369,7 +374,8 @@
       board[it][jt - 1] = number;
       animation.to = { x: it, y: jt - 1, value: number };
       return moveCellLeft(board, it, jt - 1, animation);
-    } else if (board[it][jt - 1] === number) {
+    } else if (board[it][jt - 1] === number && !currentMerged.has(it * BOARD_SIZE + jt - 1)) {
+      currentMerged.add(it * BOARD_SIZE + jt - 1);
       board[it][jt] = null;
       score += number * 2;
       board[it][jt - 1] = number * 2;
@@ -415,7 +421,8 @@
       board[it][jt + 1] = number;
       animation.to = { x: it, y: jt + 1, value: number };
       return moveCellRight(board, it, jt + 1, animation);
-    } else if (board[it][jt + 1] === number) {
+    } else if (board[it][jt + 1] === number && !currentMerged.has(it * BOARD_SIZE + jt + 1)) {
+      currentMerged.add(it * BOARD_SIZE + jt + 1);
       board[it][jt] = null;
       score += number * 2;
       board[it][jt + 1] = number * 2;
@@ -442,6 +449,7 @@
   };
 
   const applyMovement = (code: string, board: Array<Array<BoardCell>>) => {
+    currentMerged.clear();
     if (code === "ArrowUp" || code === "KeyW") {
       moveUp(board);
     } else if (code === "ArrowDown" || code === "KeyS") {
